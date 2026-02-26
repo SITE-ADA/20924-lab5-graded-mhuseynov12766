@@ -7,6 +7,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
 import java.util.List;
 import java.util.UUID;
 
@@ -88,6 +91,86 @@ public class EventController {
         try {
             Event updatedEvent = eventService.partialUpdateEvent(id, partialEvent);
             return new ResponseEntity<>(updatedEvent, HttpStatus.OK);
+        } catch (RuntimeException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // 7. FILTER BY DATE RANGE - GET /api/events/filter/date?start=...&end=...
+    @GetMapping("/filter/date")
+    public ResponseEntity<List<Event>> getEventsByDateRange(
+            @RequestParam("start") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam("end") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        try {
+            if (start == null || end == null) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+            if (end.isBefore(start)) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+            List<Event> events = eventService.getEventsByDateRange(start, end);
+            return new ResponseEntity<>(events, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // 8. FILTER BY PRICE RANGE - GET /api/events/filter/price?min=...&max=...
+    @GetMapping("/filter/price")
+    public ResponseEntity<List<Event>> getEventsByPriceRange(
+            @RequestParam("min") BigDecimal min,
+            @RequestParam("max") BigDecimal max) {
+        try {
+            if (min == null || max == null) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+            if (max.compareTo(min) < 0) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+            List<Event> events = eventService.getEventsByPriceRange(min, max);
+            return new ResponseEntity<>(events, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    // 9. FILTER BY TAG - GET /api/events/filter/tag?tag=...
+    @GetMapping("/filter/tag")
+    public ResponseEntity<List<Event>> getEventsByTag(@RequestParam("tag") String tag) {
+        try {
+            List<Event> events = eventService.getEventsByTag(tag);
+            return new ResponseEntity<>(events, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // 10. UPCOMING EVENTS - GET /api/events/upcoming
+    @GetMapping("/upcoming")
+    public ResponseEntity<List<Event>> getUpcomingEvents() {
+        try {
+            List<Event> events = eventService.getUpcomingEvents();
+            return new ResponseEntity<>(events, HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // 11. UPDATE EVENT PRICE - PATCH /api/events/{id}/price?price=...
+    @PatchMapping("/{id}/price")
+    public ResponseEntity<Event> updateEventPrice(
+            @PathVariable UUID id,
+            @RequestParam("price") BigDecimal price) {
+        try {
+            if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
+            Event updatedEvent = eventService.updateEventPrice(id, price);
+            return new ResponseEntity<>(updatedEvent, HttpStatus.OK);
+        } catch (IllegalArgumentException e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         } catch (RuntimeException e) {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         } catch (Exception e) {
