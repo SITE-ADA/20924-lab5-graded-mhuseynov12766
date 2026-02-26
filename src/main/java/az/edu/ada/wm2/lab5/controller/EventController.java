@@ -164,6 +164,9 @@ public class EventController {
             @PathVariable UUID id,
             @RequestParam("price") BigDecimal price) {
         try {
+            if (price == null || price.compareTo(BigDecimal.ZERO) < 0) {
+                return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+            }
             Event updatedEvent = eventService.updateEventPrice(id, price);
             return new ResponseEntity<>(updatedEvent, HttpStatus.OK);
         } catch (IllegalArgumentException e) {
